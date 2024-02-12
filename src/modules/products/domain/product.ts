@@ -1,8 +1,7 @@
 import { Jsonable } from "../../../common/jsonable";
-import { ID } from "../../../common/types";
 
 export interface ProductDTO {
-  id: ID;
+  id: number;
   name: string;
   description: string;
   price: number;
@@ -13,7 +12,7 @@ export interface ProductDTO {
 export class Product implements Jsonable {
   constructor(protected params: ProductDTO) {}
 
-  getId(): ID {
+  getId(): number {
     return this.params.id;
   }
 
