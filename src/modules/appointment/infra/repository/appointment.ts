@@ -2,7 +2,6 @@ import { PrismaClient } from "@prisma/client";
 import { Appointment } from "../../domain/appointment";
 import { AppointmentFilter } from "../../domain/appointment-filter";
 import { AppointmentRepository } from "../../domain/appointment-repository";
-import { AppointmentAdapter } from "./adapter/appointment-entity";
 
 export class AppointmentPrismaRepository implements AppointmentRepository {
   private prisma: PrismaClient;
@@ -11,14 +10,8 @@ export class AppointmentPrismaRepository implements AppointmentRepository {
     this.prisma = new PrismaClient();
   }
   async create(appointment: AppointmentFilter): Promise<Appointment> {
-    const appointmentAdapter = new AppointmentAdapter();
-
-    const appointmentPrisma = appointmentAdapter.toPrisma(
-      appointment.toJson() as any,
-    );
-
     const appointmentCreated = await this.prisma.appointments.create({
-      data: appointmentPrisma,
+      data: appointment.toJson(),
     });
 
     return new Appointment(appointmentCreated);

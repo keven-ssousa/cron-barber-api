@@ -11,18 +11,18 @@ datasource db {
 }
 
 model Appointments {
-  id         Int      @id @default(autoincrement())
+  id         Int       @id @default(autoincrement())
   schedule   DateTime
-  customer   Customer @relation(fields: [customerId], references: [id])
+  customers  Customers @relation(fields: [customerId], references: [id])
   customerId Int
-  barber     Barber   @relation(fields: [barberId], references: [id])
+  barbers    Barbers   @relation(fields: [barberId], references: [id])
   barberId   Int
-  active     Boolean  @default(true)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  active     Boolean   @default(true)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @default(now()) @updatedAt
 }
 
-model Customer {
+model Customers {
   id           Int            @id @default(autoincrement())
   name         String
   phoneNumber  String
@@ -32,12 +32,12 @@ model Customer {
   Appointments Appointments[]
 }
 
-model Barber {
+model Barbers {
   id                Int            @id @default(autoincrement())
   name              String
   imgUrl            String?
   createdAt         DateTime       @default(now())
-  updatedAt         DateTime       @updatedAt
+  updatedAt         DateTime       @default(now()) @updatedAt
   avaliableSchedule Int[]
   Appointments      Appointments[]
 }

@@ -1,4 +1,6 @@
-import { CustomerAppointmentDTO } from "./customer-appointment-dto";
+export interface CustomerAppointmentDTO {
+  customerId: number;
+}
 
 export class CustomerAppointment {
   constructor(protected params: CustomerAppointmentDTO) {}

@@ -1,7 +1,7 @@
 import { Jsonable } from "../../../common/jsonable";
 
 export interface AppointmentFilterDTO {
-  schedule: number;
+  schedule: Date;
   customerId: number;
   barberId: number;
 }
@@ -9,7 +9,7 @@ export interface AppointmentFilterDTO {
 export class AppointmentFilter implements Jsonable {
   constructor(protected params: AppointmentFilterDTO) {}
 
-  getSchedule(): number {
+  getSchedule(): Date {
     return this.params.schedule;
   }
 

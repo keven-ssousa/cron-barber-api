@@ -4,8 +4,8 @@ import dotenv from "dotenv";
 import { createServer } from "http";
 import Koa from "koa";
 import bodyParser from "koa-bodyparser";
-import { getProductBootstrap } from "../../modules/products/infra/bootstrap/product-bootstrap";
-import { ProductRequestKoaRoutesBuilder } from "../../modules/products/infra/http/koa/product-routes-builder";
+import { getAppointmentBootstrap } from "../../modules/appointment/infra/bootstrap/appoitment-boostrap";
+import { AppointmentRequestKoaRoutesBuilder } from "../../modules/appointment/infra/http/koa/appoitment-koa-router-builder";
 import { KoaRoutesBuilder } from "./koa-router-builder";
 
 bootstrap();
@@ -13,6 +13,7 @@ bootstrap();
 const app = new Koa();
 
 app.use(cors());
+
 const router = new Router();
 
 buildRoutes();
@@ -24,7 +25,7 @@ createServer(app.callback())
 
 function buildRoutes() {
   const routesBuilders: KoaRoutesBuilder[] = [
-    new ProductRequestKoaRoutesBuilder(router),
+    new AppointmentRequestKoaRoutesBuilder(router),
   ];
 
   for (const routesBuilder of routesBuilders) {
@@ -34,7 +35,7 @@ function buildRoutes() {
 
 function bootstrap() {
   dotenv.config();
-  getProductBootstrap();
+  getAppointmentBootstrap();
 }
 
 function listeningEvent() {
