@@ -9,16 +9,41 @@ export class AppointmentPrismaRepository implements AppointmentRepository {
   constructor() {
     this.prisma = new PrismaClient();
   }
-  async create(appointment: AppointmentFilter): Promise<Appointment> {
-    const appointmentCreated = await this.prisma.appointments.create({
-      data: appointment.toJson(),
+
+  async create(appointmentFilter: AppointmentFilter): Promise<Appointment> {
+    // Convertendo do AppointmentFilter para o formato do Prisma
+    const { startTime, endTime } = this.calculateTimeSlot(
+      appointmentFilter.getSchedule(),
+    );
+
+    const appointmentCreated = await this.prisma.appointment.create({
+      data: {
+        startTime,
+        endTime,
+        barbershopId: 1, // Valor temporário, deve ser obtido por uma lógica de negócio
+        serviceId: appointmentFilter.getBarberId(), // Mapeamento temporário
+        customerId: appointmentFilter.getCustomerId(),
+        status: "CONFIRMED",
+      },
+      include: {
+        barbershop: true,
+        service: true,
+        customer: true,
+      },
     });
 
-    return new Appointment(appointmentCreated);
+    // Convertendo do formato Prisma para o formato do domínio de módulo
+    return new Appointment({
+      id: appointmentCreated.id,
+      schedule: appointmentCreated.startTime,
+      barberId: appointmentCreated.serviceId, // Mapeamento temporário
+      customerId: appointmentCreated.customerId,
+      active: appointmentCreated.status !== "CANCELED",
+    });
   }
 
   async getAppointment(id: number): Promise<Appointment> {
-    const appointment = await this.prisma.appointments.findUnique({
+    const appointment = await this.prisma.appointment.findUnique({
       where: {
         id: id,
       },
@@ -27,6 +52,26 @@ export class AppointmentPrismaRepository implements AppointmentRepository {
     if (!appointment) {
       throw new Error("Appointment not found");
     }
-    return new Appointment(appointment);
+
+    return new Appointment({
+      id: appointment.id,
+      schedule: appointment.startTime,
+      barberId: appointment.serviceId, // Mapeamento temporário
+      customerId: appointment.customerId,
+      active: appointment.status !== "CANCELED",
+    });
+  }
+
+  private calculateTimeSlot(schedule: Date): {
+    startTime: Date;
+    endTime: Date;
+  } {
+    // Lógica para calcular o endTime baseado no startTime e na duração do serviço
+    // Como não temos a duração aqui, vamos usar um valor padrão de 1 hora
+    const startTime = new Date(schedule);
+    const endTime = new Date(schedule);
+    endTime.setHours(endTime.getHours() + 1);
+
+    return { startTime, endTime };
   }
 }

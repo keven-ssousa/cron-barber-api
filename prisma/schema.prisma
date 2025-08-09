@@ -2,7 +2,7 @@
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
   binaryTargets = ["native", "linux-musl", "debian-openssl-1.1.x"]
 }
 
@@ -11,34 +11,155 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Appointments {
-  id         Int       @id @default(autoincrement())
-  schedule   DateTime
-  customers  Customers @relation(fields: [customerId], references: [id])
-  customerId Int
-  barbers    Barbers   @relation(fields: [barberId], references: [id])
-  barberId   Int
-  active     Boolean   @default(true)
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @default(now()) @updatedAt
+// Supabase auth integration
+model auth_user {
+  id           String       @id
+  email        String       @unique
+  first_name   String?
+  last_name    String?
+  phone_number String?
+  role         Role         @default(BARBER)
+  created_at   DateTime     @default(now())
+  updated_at   DateTime     @updatedAt
+  barbershops  BarberShop[]
+  customers    Customer[]
+
+  @@map("auth_users")
 }
 
-model Customers {
-  id           Int            @id @default(autoincrement())
+enum Role {
+  ADMIN
+  BARBER
+  CUSTOMER
+}
+
+model BarberShop {
+  id            Int            @id @default(autoincrement())
+  name          String
+  slug          String         @unique
+  description   String?
+  address       String?
+  logoUrl       String?
+  ownerId       String
+  owner         auth_user      @relation(fields: [ownerId], references: [id])
+  timezone      String         @default("UTC")
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  services      Service[]
+  scheduleRules ScheduleRule[]
+  blockouts     Blockout[]
+  appointments  Appointment[]
+  subscription  Subscription?
+
+  @@map("barbershops")
+}
+
+model Service {
+  id              Int           @id @default(autoincrement())
+  name            String
+  description     String?
+  price           Decimal       @db.Decimal(10, 2)
+  durationMinutes Int
+  isActive        Boolean       @default(true)
+  barbershopId    Int
+  barbershop      BarberShop    @relation(fields: [barbershopId], references: [id])
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  appointments    Appointment[]
+
+  @@map("services")
+}
+
+model ScheduleRule {
+  id           Int        @id @default(autoincrement())
+  dayOfWeek    Int // 0-6 (Domingo-Sábado)
+  startTime    String // formato "HH:mm" em UTC
+  endTime      String // formato "HH:mm" em UTC
+  isActive     Boolean    @default(true)
+  barbershopId Int
+  barbershop   BarberShop @relation(fields: [barbershopId], references: [id])
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@unique([barbershopId, dayOfWeek])
+  @@map("schedule_rules")
+}
+
+model Blockout {
+  id           Int        @id @default(autoincrement())
+  startTime    DateTime // UTC
+  endTime      DateTime // UTC
+  reason       String?
+  barbershopId Int
+  barbershop   BarberShop @relation(fields: [barbershopId], references: [id])
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@map("blockouts")
+}
+
+model Customer {
+  id           Int           @id @default(autoincrement())
   name         String
-  phoneNumber  String
   email        String?
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @default(now()) @updatedAt
-  Appointments Appointments[]
+  phoneNumber  String
+  userId       String?
+  user         auth_user?    @relation(fields: [userId], references: [id])
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  appointments Appointment[]
+
+  @@map("customers")
 }
 
-model Barbers {
-  id                Int            @id @default(autoincrement())
-  name              String
-  imgUrl            String?
-  createdAt         DateTime       @default(now())
-  updatedAt         DateTime       @default(now()) @updatedAt
-  avaliableSchedule Int[]
-  Appointments      Appointments[]
+model Appointment {
+  id                 Int               @id @default(autoincrement())
+  startTime          DateTime // UTC
+  endTime            DateTime // UTC
+  status             AppointmentStatus @default(CONFIRMED)
+  cancellationReason String?
+  notes              String?
+  barbershopId       Int
+  barbershop         BarberShop        @relation(fields: [barbershopId], references: [id])
+  serviceId          Int
+  service            Service           @relation(fields: [serviceId], references: [id])
+  customerId         Int
+  customer           Customer          @relation(fields: [customerId], references: [id])
+  cancelToken        String            @unique @default(uuid())
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+
+  @@index([barbershopId, startTime, endTime])
+  @@map("appointments")
+}
+
+enum AppointmentStatus {
+  CONFIRMED
+  CANCELED
+  COMPLETED
+  NO_SHOW
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  UNPAID
+  TRIAL
+}
+
+model Subscription {
+  id                 String             @id
+  barbershopId       Int                @unique
+  barbershop         BarberShop         @relation(fields: [barbershopId], references: [id])
+  stripeCustomerId   String
+  status             SubscriptionStatus
+  planId             String // ID do plano no Stripe
+  currentPeriodStart DateTime
+  currentPeriodEnd   DateTime
+  cancelAtPeriodEnd  Boolean            @default(false)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  @@map("subscriptions")
 }
