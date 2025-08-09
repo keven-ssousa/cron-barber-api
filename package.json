@@ -8,7 +8,8 @@
     "start": "npm run build && node dist/main.js",
     "dev": "nodemon --watch src/ --exec 'ts-node src/main.ts' -e ts",
     "start-ts": "npx ts-node src/main.ts",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "postinstall": "npx prisma generate"
   },
   "author": "",
   "license": "ISC",
