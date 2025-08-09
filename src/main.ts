@@ -13,6 +13,7 @@ import { NodemailerEmailService } from "./infrastructure/notifications/email/nod
 import { WhatsAppNotificationGateway } from "./infrastructure/notifications/whatsapp/whatsapp-notification.gateway";
 import { StripePaymentService } from "./infrastructure/payment/stripe-payment.service";
 import { SupabaseService } from "./infrastructure/supabase/supabase.service";
+import { AppointmentPrismaRepository } from "./modules/appointment/infra/repository/appointment";
 import { createAuthController } from "./presentation/http/controllers/auth.controller";
 import { createBarbershopController } from "./presentation/http/controllers/barbershop.controller";
 import { createPublicController } from "./presentation/http/controllers/public.controller";
@@ -67,6 +68,12 @@ function registerDependencies() {
   container.registerSingleton(
     "BarbershopRepository",
     PrismaBarbershopRepository,
+  );
+
+  // Repositórios de módulos
+  container.registerSingleton(
+    "AppointmentRepository",
+    AppointmentPrismaRepository,
   );
 
   // Notification gateways

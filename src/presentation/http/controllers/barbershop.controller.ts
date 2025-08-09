@@ -28,11 +28,21 @@ export function createBarbershopController(): Router {
     }
   });
 
+  // Interface para o corpo da requisição de criar/atualizar barbearia
+  interface BarbershopRequestBody {
+    name?: string;
+    slug?: string;
+    description?: string;
+    address?: string;
+    logoUrl?: string;
+    timezone?: string;
+  }
+
   // POST /shops - Create a new barbershop
   router.post("/", async (ctx: Context) => {
     try {
-      const { name, slug, description, address, logoUrl, timezone } =
-        ctx.request.body;
+      const { name, slug, description, address, logoUrl, timezone } = ctx
+        .request.body as BarbershopRequestBody;
 
       if (!name || !slug) {
         ctx.status = 400;
@@ -111,8 +121,8 @@ export function createBarbershopController(): Router {
   router.put("/:id", async (ctx: Context) => {
     try {
       const { id } = ctx.params;
-      const { name, slug, description, address, logoUrl, timezone } =
-        ctx.request.body;
+      const { name, slug, description, address, logoUrl, timezone } = ctx
+        .request.body as BarbershopRequestBody;
 
       // In a real implementation, we would use a proper use case handler
       const barbershopRepository = container.resolve<any>(
