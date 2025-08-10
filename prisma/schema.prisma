@@ -149,17 +149,32 @@ enum SubscriptionStatus {
 }
 
 model Subscription {
-  id                 String             @id
-  barbershopId       Int                @unique
-  barbershop         BarberShop         @relation(fields: [barbershopId], references: [id])
+  id                 String               @id
+  barbershopId       Int                  @unique
+  barbershop         BarberShop           @relation(fields: [barbershopId], references: [id])
   stripeCustomerId   String
   status             SubscriptionStatus
   planId             String // ID do plano no Stripe
   currentPeriodStart DateTime
   currentPeriodEnd   DateTime
-  cancelAtPeriodEnd  Boolean            @default(false)
-  createdAt          DateTime           @default(now())
-  updatedAt          DateTime           @updatedAt
+  cancelAtPeriodEnd  Boolean              @default(false)
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  invites            SubscriptionInvite[]
 
   @@map("subscriptions")
+}
+
+model SubscriptionInvite {
+  id             String       @id @default(uuid())
+  email          String
+  token          String       @unique
+  subscriptionId String
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id])
+  isUsed         Boolean      @default(false)
+  expiresAt      DateTime
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@map("subscription_invites")
 }

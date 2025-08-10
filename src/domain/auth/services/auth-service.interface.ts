@@ -11,4 +11,7 @@ export interface AuthService {
   ): Promise<{ user: any; token: string }>;
   signOut(token: string): Promise<boolean>;
   validateToken(token: string): Promise<any>;
+  resendConfirmationEmail(email: string): Promise<boolean>;
+  verifyEmail(tokenHash: string): Promise<boolean>;
+  resendVerificationEmail(email: string): Promise<boolean>;
 }

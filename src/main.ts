@@ -4,10 +4,12 @@ import Koa from "koa";
 import bodyParser from "koa-bodyparser";
 import "reflect-metadata";
 import { container } from "tsyringe";
+import { CreateAccountFromInviteHandler } from "./application/auth/commands/create-account-from-invite.command";
 import { AppointmentCreatedHandler } from "./application/notification/event-handlers/appointment-created.handler";
 import { AppointmentCreatedEvent } from "./domain/appointment/events/appointment-created.event";
 import { SupabaseAuthService } from "./infrastructure/auth/supabase-auth.service";
 import { PrismaBarbershopRepository } from "./infrastructure/database/repositories/prisma-barbershop.repository";
+import { PrismaSubscriptionInviteService } from "./infrastructure/database/services/prisma-subscription-invite.service";
 import { EventEmitter } from "./infrastructure/events/event-emitter";
 import { NodemailerEmailService } from "./infrastructure/notifications/email/nodemailer-email.service";
 import { WhatsAppNotificationGateway } from "./infrastructure/notifications/whatsapp/whatsapp-notification.gateway";
@@ -63,6 +65,18 @@ function registerDependencies() {
   // Pagamento e Email
   container.registerSingleton("PaymentService", StripePaymentService);
   container.registerSingleton("EmailService", NodemailerEmailService);
+
+  // Serviços de assinatura
+  container.registerSingleton(
+    "SubscriptionInviteService",
+    PrismaSubscriptionInviteService,
+  );
+
+  // Command handlers
+  container.registerSingleton(
+    "CreateAccountFromInviteHandler",
+    CreateAccountFromInviteHandler,
+  );
 
   // Repositories
   container.registerSingleton(

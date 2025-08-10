@@ -1,68 +1,14 @@
 import Router from "@koa/router";
-import { randomBytes } from "crypto";
 import { Context } from "koa";
 import { container } from "tsyringe";
 
+import { CreateAccountFromInviteHandler } from "../../../application/auth/commands/create-account-from-invite.command";
 import {
   BarberSignupInviteData,
   EmailService,
 } from "../../../domain/notification/services/email-service.interface";
 import { PaymentService } from "../../../domain/payment/services/payment-service.interface";
-
-// Interface para o serviço de tokens de convite
-interface InviteTokenService {
-  createToken(email: string, metadata: any): Promise<string>;
-  validateToken(
-    token: string,
-  ): Promise<{ email: string; metadata: any } | null>;
-}
-
-// Implementação temporária simples de tokens
-class SimpleInviteTokenService implements InviteTokenService {
-  private tokens: Map<
-    string,
-    { email: string; metadata: any; expiresAt: Date }
-  > = new Map();
-
-  async createToken(email: string, metadata: any): Promise<string> {
-    // Gerar token aleatório
-    const token = randomBytes(32).toString("hex");
-
-    // Definir data de expiração (24 horas)
-    const expiresAt = new Date();
-    expiresAt.setHours(expiresAt.getHours() + 24);
-
-    // Armazenar token com metadados
-    this.tokens.set(token, { email, metadata, expiresAt });
-
-    return token;
-  }
-
-  async validateToken(
-    token: string,
-  ): Promise<{ email: string; metadata: any } | null> {
-    const tokenData = this.tokens.get(token);
-
-    // Verificar se o token existe e não expirou
-    if (!tokenData || tokenData.expiresAt < new Date()) {
-      return null;
-    }
-
-    // Token válido, remover após uso
-    this.tokens.delete(token);
-
-    return {
-      email: tokenData.email,
-      metadata: tokenData.metadata,
-    };
-  }
-}
-
-// Registrar o serviço de tokens no container
-container.registerSingleton<InviteTokenService>(
-  "InviteTokenService",
-  SimpleInviteTokenService,
-);
+import { SubscriptionInviteService } from "../../../domain/subscription/services/subscription-invite-service.interface";
 
 export function createSubscriptionController(): Router {
   const router = new Router({
@@ -123,8 +69,10 @@ export function createSubscriptionController(): Router {
       const paymentService =
         container.resolve<PaymentService>("PaymentService");
       const emailService = container.resolve<EmailService>("EmailService");
-      const inviteTokenService =
-        container.resolve<InviteTokenService>("InviteTokenService");
+      const subscriptionInviteService =
+        container.resolve<SubscriptionInviteService>(
+          "SubscriptionInviteService",
+        );
 
       // Obter o corpo bruto da requisição
       const payload = ctx.request.body; // Considere que o body já está como string
@@ -137,17 +85,15 @@ export function createSubscriptionController(): Router {
 
       // Lidar com diferentes tipos de eventos
       if (result.type === "checkout.session.completed") {
-        const { customerEmail, metadata } = result.data;
+        const { customerEmail, metadata, subscriptionId } = result.data;
 
         // Verificar se é uma nova assinatura de barbeiro
-        if (metadata && metadata.isNewBarber === "true") {
+        if (metadata && metadata.isNewBarber === "true" && subscriptionId) {
           // Criar token de convite
-          const inviteToken = await inviteTokenService.createToken(
+          const inviteToken = await subscriptionInviteService.createInvite(
             customerEmail,
-            {
-              subscriptionId: result.data.subscriptionId,
-              planId: result.data.planId,
-            },
+            subscriptionId,
+            24, // 24 horas para expiração,
           );
 
           // Configurar dados para o email de convite
@@ -206,9 +152,13 @@ export function createSubscriptionController(): Router {
         return;
       }
 
-      const inviteTokenService =
-        container.resolve<InviteTokenService>("InviteTokenService");
-      const result = await inviteTokenService.validateToken(token as string);
+      const subscriptionInviteService =
+        container.resolve<SubscriptionInviteService>(
+          "SubscriptionInviteService",
+        );
+      const result = await subscriptionInviteService.validateInvite(
+        token as string,
+      );
 
       if (!result) {
         ctx.status = 400;
@@ -219,10 +169,78 @@ export function createSubscriptionController(): Router {
       ctx.body = {
         valid: true,
         email: result.email,
-        subscriptionId: result.metadata.subscriptionId,
+        subscriptionId: result.subscriptionId,
       };
     } catch (error: any) {
       console.error("Erro ao validar token:", error);
+      ctx.status = 500;
+      ctx.body = { error: error.message };
+    }
+  });
+
+  // POST /subscriptions/create-account - Criar conta a partir de um convite
+  router.post("/create-account", async (ctx: Context) => {
+    try {
+      const {
+        token,
+        password,
+        firstName,
+        lastName,
+        barbershopName,
+        barbershopSlug,
+      } = ctx.request.body as {
+        token: string;
+        password: string;
+        firstName: string;
+        lastName: string;
+        barbershopName: string;
+        barbershopSlug: string;
+      };
+
+      if (
+        !token ||
+        !password ||
+        !firstName ||
+        !lastName ||
+        !barbershopName ||
+        !barbershopSlug
+      ) {
+        ctx.status = 400;
+        ctx.body = { error: "Parâmetros incompletos" };
+        return;
+      }
+
+      // Resolver o handler para criar conta a partir de convite
+      const createAccountHandler =
+        container.resolve<CreateAccountFromInviteHandler>(
+          "CreateAccountFromInviteHandler",
+        );
+
+      try {
+        // Executar o comando
+        const result = await createAccountHandler.execute({
+          token,
+          password,
+          firstName,
+          lastName,
+          barbershopName,
+          barbershopSlug,
+        });
+
+        ctx.status = 201;
+        ctx.body = {
+          success: true,
+          message: "Conta criada com sucesso",
+          userId: result.userId,
+          barbershopId: result.barbershopId,
+          token: result.token,
+        };
+      } catch (cmdError: any) {
+        ctx.status = 400;
+        ctx.body = { error: cmdError.message };
+      }
+    } catch (error: any) {
+      console.error("Erro ao criar conta:", error);
       ctx.status = 500;
       ctx.body = { error: error.message };
     }
