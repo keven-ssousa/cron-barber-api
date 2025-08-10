@@ -1,11 +1,3 @@
-/*
-  Warnings:
-
-  - You are about to drop the `Appointments` table. If the table is not empty, all the data it contains will be lost.
-  - You are about to drop the `Barbers` table. If the table is not empty, all the data it contains will be lost.
-  - You are about to drop the `Customers` table. If the table is not empty, all the data it contains will be lost.
-
-*/
 -- CreateEnum
 CREATE TYPE "Role" AS ENUM ('ADMIN', 'BARBER', 'CUSTOMER');
 
@@ -14,21 +6,6 @@ CREATE TYPE "AppointmentStatus" AS ENUM ('CONFIRMED', 'CANCELED', 'COMPLETED', '
 
 -- CreateEnum
 CREATE TYPE "SubscriptionStatus" AS ENUM ('ACTIVE', 'PAST_DUE', 'CANCELED', 'UNPAID', 'TRIAL');
-
--- DropForeignKey
-ALTER TABLE "Appointments" DROP CONSTRAINT "Appointments_barberId_fkey";
-
--- DropForeignKey
-ALTER TABLE "Appointments" DROP CONSTRAINT "Appointments_customerId_fkey";
-
--- DropTable
-DROP TABLE "Appointments";
-
--- DropTable
-DROP TABLE "Barbers";
-
--- DropTable
-DROP TABLE "Customers";
 
 -- CreateTable
 CREATE TABLE "auth_users" (
@@ -106,8 +83,8 @@ CREATE TABLE "blockouts" (
 CREATE TABLE "customers" (
     "id" SERIAL NOT NULL,
     "name" TEXT NOT NULL,
-    "email" TEXT,
-    "phoneNumber" TEXT NOT NULL,
+    "email" TEXT NOT NULL,
+    "phone" TEXT NOT NULL,
     "userId" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
@@ -149,6 +126,20 @@ CREATE TABLE "subscriptions" (
     CONSTRAINT "subscriptions_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "subscription_invites" (
+    "id" TEXT NOT NULL,
+    "email" TEXT NOT NULL,
+    "token" TEXT NOT NULL,
+    "subscriptionId" TEXT NOT NULL,
+    "isUsed" BOOLEAN NOT NULL DEFAULT false,
+    "expiresAt" TIMESTAMP(3) NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "subscription_invites_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "auth_users_email_key" ON "auth_users"("email");
 
@@ -159,6 +150,12 @@ CREATE UNIQUE INDEX "barbershops_slug_key" ON "barbershops"("slug");
 CREATE UNIQUE INDEX "schedule_rules_barbershopId_dayOfWeek_key" ON "schedule_rules"("barbershopId", "dayOfWeek");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "customers_email_key" ON "customers"("email");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "customers_phone_key" ON "customers"("phone");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "appointments_cancelToken_key" ON "appointments"("cancelToken");
 
 -- CreateIndex
@@ -166,6 +163,9 @@ CREATE INDEX "appointments_barbershopId_startTime_endTime_idx" ON "appointments"
 
 -- CreateIndex
 CREATE UNIQUE INDEX "subscriptions_barbershopId_key" ON "subscriptions"("barbershopId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "subscription_invites_token_key" ON "subscription_invites"("token");
 
 -- AddForeignKey
 ALTER TABLE "barbershops" ADD CONSTRAINT "barbershops_ownerId_fkey" FOREIGN KEY ("ownerId") REFERENCES "auth_users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -193,3 +193,6 @@ ALTER TABLE "appointments" ADD CONSTRAINT "appointments_customerId_fkey" FOREIGN
 
 -- AddForeignKey
 ALTER TABLE "subscriptions" ADD CONSTRAINT "subscriptions_barbershopId_fkey" FOREIGN KEY ("barbershopId") REFERENCES "barbershops"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "subscription_invites" ADD CONSTRAINT "subscription_invites_subscriptionId_fkey" FOREIGN KEY ("subscriptionId") REFERENCES "subscriptions"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

@@ -76,12 +76,14 @@ model ScheduleRule {
   startTime    String // formato "HH:mm" em UTC
   endTime      String // formato "HH:mm" em UTC
   isActive     Boolean    @default(true)
+  order        Int        @default(0) // Ordem do intervalo no dia
   barbershopId Int
   barbershop   BarberShop @relation(fields: [barbershopId], references: [id])
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
-  @@unique([barbershopId, dayOfWeek])
+  @@unique([barbershopId, dayOfWeek, startTime, endTime])
+  @@index([barbershopId, dayOfWeek, order])
   @@map("schedule_rules")
 }
 
@@ -101,8 +103,8 @@ model Blockout {
 model Customer {
   id           Int           @id @default(autoincrement())
   name         String
-  email        String?
-  phoneNumber  String
+  email        String        @unique
+  phone        String        @unique
   userId       String?
   user         auth_user?    @relation(fields: [userId], references: [id])
   createdAt    DateTime      @default(now())

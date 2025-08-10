@@ -3,12 +3,14 @@ export class ScheduleRule {
   private readonly _startTime: string;
   private readonly _endTime: string;
   private readonly _isActive: boolean;
+  private readonly _order: number;
 
   constructor(
     dayOfWeek: number,
     startTime: string,
     endTime: string,
     isActive: boolean = true,
+    order: number = 0,
   ) {
     this.validateDayOfWeek(dayOfWeek);
     this.validateTimeFormat(startTime, "horário de início");
@@ -19,6 +21,7 @@ export class ScheduleRule {
     this._startTime = startTime;
     this._endTime = endTime;
     this._isActive = isActive;
+    this._order = order;
   }
 
   private validateDayOfWeek(dayOfWeek: number): void {
@@ -110,12 +113,42 @@ export class ScheduleRule {
     );
   }
 
+  public get order(): number {
+    return this._order;
+  }
+
+  public overlaps(other: ScheduleRule): boolean {
+    if (this._dayOfWeek !== other._dayOfWeek) return false;
+
+    const [thisStartHour, thisStartMinute] = this._startTime
+      .split(":")
+      .map(Number);
+    const [thisEndHour, thisEndMinute] = this._endTime.split(":").map(Number);
+    const [otherStartHour, otherStartMinute] = other._startTime
+      .split(":")
+      .map(Number);
+    const [otherEndHour, otherEndMinute] = other._endTime
+      .split(":")
+      .map(Number);
+
+    const thisStart = thisStartHour * 60 + thisStartMinute;
+    const thisEnd = thisEndHour * 60 + thisEndMinute;
+    const otherStart = otherStartHour * 60 + otherStartMinute;
+    const otherEnd = otherEndHour * 60 + otherEndMinute;
+
+    return (
+      (thisStart < otherEnd && thisEnd > otherStart) || // Intervalos se sobrepõem
+      (thisStart === otherStart && thisEnd === otherEnd) // Intervalos são idênticos
+    );
+  }
+
   public equals(other: ScheduleRule): boolean {
     return (
       this._dayOfWeek === other._dayOfWeek &&
       this._startTime === other._startTime &&
       this._endTime === other._endTime &&
-      this._isActive === other._isActive
+      this._isActive === other._isActive &&
+      this._order === other._order
     );
   }
 
@@ -125,6 +158,7 @@ export class ScheduleRule {
     startTime: string;
     endTime: string;
     isActive: boolean;
+    order: number;
   } {
     return {
       dayOfWeek: this._dayOfWeek,
@@ -132,6 +166,7 @@ export class ScheduleRule {
       startTime: this._startTime,
       endTime: this._endTime,
       isActive: this._isActive,
+      order: this._order,
     };
   }
 }

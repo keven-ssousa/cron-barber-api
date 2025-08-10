@@ -63,6 +63,23 @@ export function createBarbershopController(): Router {
         return;
       }
 
+      // Ensure user exists in local database
+      const prismaUserRepository = container.resolve<any>(
+        "PrismaUserRepository",
+      );
+      let user = await prismaUserRepository.findById(ctx.state.user.id);
+
+      if (!user) {
+        // Create user in local database if doesn't exist
+        user = await prismaUserRepository.create({
+          id: ctx.state.user.id,
+          email: ctx.state.user.email,
+          name:
+            ctx.state.user.user_metadata?.name ||
+            ctx.state.user.email.split("@")[0],
+        });
+      }
+
       // Create new barbershop
       const barbershop = {
         name,
@@ -79,9 +96,32 @@ export function createBarbershopController(): Router {
       ctx.status = 201;
       ctx.body = created;
     } catch (error: any) {
-      console.error("Error creating barbershop:", error);
+      console.error("Error creating barbershop:", {
+        error,
+        userId: ctx.state.user.id,
+        requestBody: ctx.request.body,
+        errorName: error.name,
+        errorCode: error.code,
+      });
+
+      if (
+        error.name === "PrismaClientKnownRequestError" &&
+        error.code === "P2003"
+      ) {
+        ctx.status = 400;
+        ctx.body = {
+          error:
+            "Failed to create barbershop. Please try again or contact support.",
+        };
+        return;
+      }
+
       ctx.status = 500;
-      ctx.body = { error: error.message };
+      ctx.body = {
+        error: "An unexpected error occurred",
+        details:
+          process.env.NODE_ENV === "development" ? error.message : undefined,
+      };
     }
   });
 
