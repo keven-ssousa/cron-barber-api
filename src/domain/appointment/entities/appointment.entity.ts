@@ -96,6 +96,11 @@ export class Appointment {
     return this._status;
   }
 
+  set status(status: AppointmentStatus) {
+    this._status = status;
+    this._updatedAt = new Date();
+  }
+
   get cancellationReason(): string | undefined {
     return this._cancellationReason;
   }
